@@ -6,8 +6,6 @@
 #include "ofxOsc.h"
 
 #define PORT 12345 // Port for communicating with Python
-#define PORT2 55555 // Port for communicating with Ableton Live
-#define HOST "localhost"
 
 class ofApp : public ofBaseApp{
 
@@ -34,7 +32,6 @@ class ofApp : public ofBaseApp{
     int on; // variable that turns piece on and off
     
     ofxOscReceiver receive; // OSC receiver
-    ofxOscSender sender; // OSC sender
     
     Population population; // Population object
     float mutationRate; // mutation rate
@@ -47,6 +44,9 @@ class ofApp : public ofBaseApp{
     maxiClock clock; // clock
     int sampleIndex; // sample index number
     SoundSquare currentSoundSquare; // current SoundSquare
+    vector<maxiSample> sounds; // vector array of sounds
+    vector<bool> isPlaying; // vector array to check if sounds are playing
+    vector<double> waves; // vector array of doubles to add together
     
     int	bufferSize; // buffer size
     int	sampleRate; // sample rate

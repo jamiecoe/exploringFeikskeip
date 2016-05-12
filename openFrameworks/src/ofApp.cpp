@@ -4,7 +4,7 @@
 void ofApp::setup(){
     
     img.load("rebecca1.png"); // load image
-    
+
     mutationRate = 0.1; // mutation rate
     numberOfSquares = 50; // number of SoundSquares
     numOfSamples = 50; // total number of possible audio samples
@@ -14,7 +14,6 @@ void ofApp::setup(){
     on = 255; // start the piece switched off
     
     receive.setup(PORT); // OSC receiver setup
-    sender.setup(HOST, PORT2); // OSC sender setup
     
     // Population setup
     population.setup(mutationRate, numberOfSquares, numOfSamples);
@@ -27,6 +26,20 @@ void ofApp::setup(){
     
     sampleRate 	= 44100; /* Sampling Rate */
     bufferSize	= 512; /* Buffer Size. you have to fill this buffer with sound using the for loop in the audioOut method */
+    
+    // Initialise sampler player array
+    for(int i = 0; i < numOfSamples; i++) {
+        maxiSample temp;
+        sounds.push_back(temp); // Add sample players to vector array
+        isPlaying.push_back(false); // All start off as false
+        waves.push_back(0); // All waves start at 0
+    }
+    
+    // Add .wav files to sample players
+    for (int i = 1; i < numOfSamples+1; i++) {
+        string soundName = "sound" + ofToString(i) + ".wav";
+        sounds[i-1].load(ofToDataPath(soundName));
+    }
     
     // Maxi settings
     ofxMaxiSettings::setup(sampleRate, 2, bufferSize);
@@ -61,6 +74,15 @@ void ofApp::update(){
         }
         
     }
+    
+    // For all the sounds
+    for (int i = 0; i < sounds.size(); i++) {
+        // If the sounds finished playing
+        if (sounds[i].finished()) {
+            isPlaying[i] = false; // set its playing state to false
+            sounds[i].setPosition(0); // set its position back to beginning
+        }
+    }
 
 }
 
@@ -73,7 +95,7 @@ void ofApp::draw(){
     // Display 'Feikskeip 3'
     img.draw(0, 0, ofGetWidth(), ofGetHeight());
     
-    // Draw a black rectangle which can be used to cover 'Feikskeip 3'
+    //Draw a black rectangle which can be used to cover 'Feikskeip 3'
     ofPushStyle();
     ofSetColor(0, on); // on is used to control transparency
     ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
@@ -81,19 +103,13 @@ void ofApp::draw(){
     
     
     // Circle to display position of gaze coordinates
-     ofDrawCircle(eyeX, eyeY, 10, 10);
+    ofDrawCircle(eyeX, eyeY, 10, 10);
    
     
-    
-    
-    
-
 
 }
 //--------------------------------------------------------------
 void ofApp::audioOut(float * output, int bufferSize, int nChannels) {
-    
-   
     
     
     for (int i = 0; i < bufferSize; i++){
@@ -105,25 +121,12 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels) {
             
             // Get audio sample reference at sample index position
             int reference = currentSoundSquare.audioSamples[sampleIndex];
-            // Create a string for audio sample name
-            string sound = "sound" + ofToString(reference);
-
+            isPlaying[reference] = true; // set its playing state to true
             
-            // If the piece is switched on
-            if (on == 0) {
-                
-                // Send OSC message to play audio sample
-                ofxOscMessage n;
-                n.setAddress("/triggerClip");
-                n.addStringArg(sound);
-                sender.sendMessage(n, false);
-                
-                // Send OSC message to turn volume on
-                ofxOscMessage v;
-                v.setAddress("/volume");
-                v.addFloatArg(0.85);
-                sender.sendMessage(v, false);
-            }
+            // print its name to console
+            string sound = "sound" + ofToString(reference);
+            cout<<sound<<endl;
+
            
             // Increment the sample index
             sampleIndex++;
@@ -135,11 +138,6 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels) {
                 if (eyeX == 0 && eyeY == 0) {
                     // 255 turns on black rectangle to cover image
                     on = 255;
-                    // Send OSC message to turn off volume
-                    ofxOscMessage v;
-                    v.setAddress("/volume");
-                    v.addFloatArg(0.);
-                    sender.sendMessage(v, false);
                 }
                 // If someone is looking at screen
                 else {
@@ -155,14 +153,34 @@ void ofApp::audioOut(float * output, int bufferSize, int nChannels) {
                 
                 sampleIndex = 0; // reset index to 0
             }
-            
-            
         }
+
+        double finalWave = 0;
+        
+        // If the piece is switched on
+        if (on == 0) {
+            
+            // For all the sounds
+            for (int j = 0; j < sounds.size(); j++) {
+                // If their play state is on
+                if (isPlaying[j]) {
+                    // Add their wave to finalWave
+                    waves[j] = sounds[j].playOnce();
+                    finalWave += waves[j];
+                }
+            }
+        }
+        else finalWave = 0; // Else turn volume off
+        
+        //play finalWave
+        output[i*nChannels    ] = finalWave;
+        output[i*nChannels + 1] = finalWave;
     }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
+    
 
 }
 
